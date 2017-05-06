@@ -1,0 +1,7 @@
+#!/bin/bash
+chords_dir=17
+places_path="/Users/popstas/Library/Application Support/Firefox/Profiles/in4o4n10.default/places.sqlite"
+
+cp "$places_path" /tmp/ff_places
+sqlite3 -separator '{{::}}' /tmp/ff_places "select title from moz_bookmarks where parent=$chords_dir order by title"
+
