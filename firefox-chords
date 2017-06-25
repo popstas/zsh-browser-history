@@ -7,11 +7,23 @@ if [ ! -e "$places_path" ]; then
     exit 1
 fi
 
-if [ ! -e "$chords_dir" ]; then
-    echo 'Please, define $FIREFOX_CHORDS_DIR to your chords dir (check it with Sqlite manager'
+if [ -z "$chords_dir" ]; then
+    echo 'Please, define $FIREFOX_CHORDS_TAG to your chords tag name'
     exit 1
 fi
 
 cp "$places_path" /tmp/ff_places
-sqlite3 -separator '{{::}}' /tmp/ff_places "select title from moz_bookmarks where parent=$chords_dir order by title"
 
+menu_id="$(sqlite3 /tmp/ff_places "select id from moz_bookmarks where guid='menu________'")"
+if [ -z "$menu_id" ]; then
+    echo "Bookmarks Menu entry not found, please report bug."
+    exit 1
+fi
+
+dir_id="$(sqlite3 /tmp/ff_places "select id from moz_bookmarks where title='$chords_dir' and parent=$menu_id")"
+if [ -z "$dir_id" ]; then
+    echo "Directory $chords_dir not found."
+    exit 1
+fi
+
+sqlite3 -separator '{{::}}' /tmp/ff_places "select title from moz_bookmarks where parent=$dir_id order by title"
