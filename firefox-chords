@@ -1,7 +1,7 @@
 #!/bin/bash
 firefox-chords() {
     local cols sep chords_dir places_path
-    cols=$(( COLUMNS / 3 ))
+    cols=500
     sep='{{::}}'
     chords_dir="${FIREFOX_CHORDS_DIR}"
     places_path="${FIREFOX_PLACES_PATH}"
