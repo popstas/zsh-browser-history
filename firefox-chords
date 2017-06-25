@@ -1,29 +1,51 @@
 #!/bin/bash
-chords_dir="${FIREFOX_CHORDS_DIR}"
-places_path="${FIREFOX_PLACES_PATH}"
+firefox-chords() {
+    local cols sep chords_dir places_path
+    cols=$(( COLUMNS / 3 ))
+    sep='{{::}}'
+    chords_dir="${FIREFOX_CHORDS_DIR}"
+    places_path="${FIREFOX_PLACES_PATH}"
+    
+    if [ ! -e "$places_path" ]; then
+        echo 'Please, define $FIREFOX_PLACES_PATH to your places.sqlite'
+        exit 1
+    fi
+    
+    if [ -z "$chords_dir" ]; then
+        echo 'Please, define $FIREFOX_CHORDS_TAG to your chords tag name'
+        exit 1
+    fi
+    
+    cp -f "$places_path" /tmp/ff_places
+    
+    menu_id="$(sqlite3 /tmp/ff_places "select id from moz_bookmarks where guid='menu________'")"
+    if [ -z "$menu_id" ]; then
+        echo "Bookmarks Menu entry not found, please report bug."
+        exit 1
+    fi
+    
+    dir_id="$(sqlite3 /tmp/ff_places "select id from moz_bookmarks where title='$chords_dir' and parent=$menu_id")"
+    if [ -z "$dir_id" ]; then
+        echo "Directory $chords_dir not found."
+        exit 1
+    fi
+    
+    out="$(sqlite3 -separator '{{::}}' /tmp/ff_places \
+    "select moz_bookmarks.title, moz_places.url \
+    from moz_bookmarks \
+    inner join moz_places on moz_places.id = moz_bookmarks.fk \
+    where moz_bookmarks.parent=$dir_id \
+    order by moz_bookmarks.title")"
+    
+    if [ "$1" = "print" ]; then
+        echo "$out" | awk -F "$sep" '{print $1}'
+    else
+        echo "$out" \
+            | awk -F "$sep" '{printf "%-'$cols's  \x1b[36m%s\n", $1, $2}' \
+            | fzf --color info:254,prompt:37,spinner:108,pointer:235,marker:235 --exact --ansi --multi --bind=ctrl-r:toggle-sort --tiebreak=index \
+            | sed 's#.*\(https*://\)#\1#' \
+            | xargs open
+    fi
+}
 
-if [ ! -e "$places_path" ]; then
-    echo 'Please, define $FIREFOX_PLACES_PATH to your places.sqlite'
-    exit 1
-fi
-
-if [ -z "$chords_dir" ]; then
-    echo 'Please, define $FIREFOX_CHORDS_TAG to your chords tag name'
-    exit 1
-fi
-
-cp "$places_path" /tmp/ff_places
-
-menu_id="$(sqlite3 /tmp/ff_places "select id from moz_bookmarks where guid='menu________'")"
-if [ -z "$menu_id" ]; then
-    echo "Bookmarks Menu entry not found, please report bug."
-    exit 1
-fi
-
-dir_id="$(sqlite3 /tmp/ff_places "select id from moz_bookmarks where title='$chords_dir' and parent=$menu_id")"
-if [ -z "$dir_id" ]; then
-    echo "Directory $chords_dir not found."
-    exit 1
-fi
-
-sqlite3 -separator '{{::}}' /tmp/ff_places "select title from moz_bookmarks where parent=$dir_id order by title"
+firefox-chords "$@"
