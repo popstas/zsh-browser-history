@@ -1,6 +1,16 @@
 #!/bin/bash
-chords_dir=17
-places_path="/Users/popstas/Library/Application Support/Firefox/Profiles/in4o4n10.default/places.sqlite"
+chords_dir="${FIREFOX_CHORDS_DIR}"
+places_path="${FIREFOX_PLACES_PATH}"
+
+if [ ! -e "$places_path" ]; then
+    echo 'Please, define $FIREFOX_PLACES_PATH to your places.sqlite'
+    exit 1
+fi
+
+if [ ! -e "$chords_dir" ]; then
+    echo 'Please, define $FIREFOX_CHORDS_DIR to your chords dir (check it with Sqlite manager'
+    exit 1
+fi
 
 cp "$places_path" /tmp/ff_places
 sqlite3 -separator '{{::}}' /tmp/ff_places "select title from moz_bookmarks where parent=$chords_dir order by title"
